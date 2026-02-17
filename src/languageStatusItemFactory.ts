@@ -2,16 +2,23 @@
 
 import * as path from "path";
 import * as vscode from "vscode";
+
 import { Commands } from "./commands";
 
-const languageServerDocumentSelector = [
-	{ scheme: 'file', language: 'java' },
-	{ scheme: 'jdt', language: 'java' },
-	{ scheme: 'untitled', language: 'java' },
-	{ pattern: '**/pom.xml' },
-	{ pattern: '**/{build,settings}.gradle'},
-	{ pattern: '**/{build,settings}.gradle.kts'}
-];
+const languageServerDocumentSelector = getLanguageServerDocumentSelector();
+
+function getLanguageServerDocumentSelector() {
+	const defaultLanguageServerDocumentSelector = [
+		{ scheme: 'file', language: 'java' },
+		{ scheme: 'jdt', language: 'java' },
+		{ scheme: 'untitled', language: 'java' },
+		{ pattern: '**/pom.xml' },
+		{ pattern: '**/{build,settings}.gradle'},
+		{ pattern: '**/{build,settings}.gradle.kts'}
+	];
+	const s = process.env['JDTLS_DOCUMENT_SELECTOR'];
+	return s ? JSON.parse(s) : defaultLanguageServerDocumentSelector;
+}
 
 export namespace StatusCommands {
 	export const switchToStandardCommand = {

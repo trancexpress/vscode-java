@@ -161,7 +161,8 @@ export async function activate(context: ExtensionContext): Promise<ExtensionAPI>
 		markdownPreviewProvider.show(context.asAbsolutePath(path.join('document', `${Commands.LEARN_MORE_ABOUT_CLEAN_UPS}.md`)), 'Java Clean Ups', "java-clean-ups", context);
 	}));
 
-	const workspacePath = path.resolve(`${storagePath}/jdt_ws`);
+	const wp = process.env['JDTLS_WORKSPACE_PATH'];
+	const workspacePath = wp ? wp : path.resolve(`${storagePath}/jdt_ws`);
 	clientLogFile = path.join(storagePath, 'client.log');
 	const cleanWorkspaceExists = fs.existsSync(path.join(workspacePath, cleanWorkspaceFileName));
 	if (cleanWorkspaceExists) {
@@ -218,17 +219,21 @@ export async function activate(context: ExtensionContext): Promise<ExtensionAPI>
 			const javaConfig = await getJavaConfig(requirements.java_home);
 			javaConfigDeferred.resolve(javaConfig);
 
+			const ds = process.env['JDTLS_CLIENT_DOCUMENT_SELECTOR'];
+			const documentSelector = ds ? JSON.parse(ds) : [
+				{ scheme: 'file', language: 'java' },
+				{ scheme: 'jdt', language: 'java' },
+				{ scheme: 'untitled', language: 'java' },
+				{ scheme: 'vscode-notebook-cell', language: 'java' }
+			];
+			const sy = process.env['JDTLS_CLIENT_SYNCHRONIZE'];
+			const synchronize  = sy ? sy.split(' ') : [ 'java', 'editor.insertSpaces', 'editor.tabSize', "files.associations" ];
 			// Options to control the language client
 			const clientOptions: LanguageClientOptions = {
 				// Register the server for java
-				documentSelector: [
-					{ scheme: 'file', language: 'java' },
-					{ scheme: 'jdt', language: 'java' },
-					{ scheme: 'untitled', language: 'java' },
-					{ scheme: 'vscode-notebook-cell', language: 'java' }
-				],
+				documentSelector: documentSelector,
 				synchronize: {
-					configurationSection: ['java', 'editor.insertSpaces', 'editor.tabSize', "files.associations"],
+					configurationSection: synchronize,
 				},
 				initializationOptions: {
 					bundles: collectJavaExtensions(extensions.all),

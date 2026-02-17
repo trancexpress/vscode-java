@@ -50,11 +50,17 @@ const USE_JAVA = "Use Java ";
 const AS_GRADLE_JVM = " as Gradle JVM";
 const UPGRADE_GRADLE = "Upgrade Gradle to ";
 const GRADLE_IMPORT_JVM = "java.import.gradle.java.home";
-export const JAVA_SELECTOR: DocumentSelector = [
-	{ scheme: "file", language: "java", pattern: "**/*.java" },
-	{ scheme: "jdt", language: "java", pattern: "**/*.class" },
-	{ scheme: "untitled", language: "java", pattern: "**/*.java" }
-];
+export const JAVA_SELECTOR: DocumentSelector = getJavaSelector();
+
+function getJavaSelector() {
+	const defaultJavaSelector = [
+		{ scheme: "file", language: "java", pattern: "**/*.java" },
+		{ scheme: "jdt", language: "java", pattern: "**/*.class" },
+		{ scheme: "untitled", language: "java", pattern: "**/*.java" }
+	];
+	const s = process.env['JDTLS_JAVA_SELECTOR'];
+	return s ? JSON.parse(s) : defaultJavaSelector;
+}
 
 export class StandardLanguageClient {
 

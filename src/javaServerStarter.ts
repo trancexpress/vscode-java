@@ -172,9 +172,13 @@ function prepareParams(requirements: RequirementsData, workspacePath, context: E
 		};
 	}
 
-	params.push('-Declipse.application=org.eclipse.jdt.ls.core.id1',
+	const app = process.env['JDTLS_ECLIPSE_APPLICATION'];
+	const prod = process.env['JDTLS_ECLIPSE_PRODUCT'];
+	const application = app ? app : "org.eclipse.jdt.ls.core.id1";
+	const product = app ? app : "eclipse.product=org.eclipse.jdt.ls.core.product";
+	params.push(`-Declipse.application=${application}`,
 				'-Dosgi.bundles.defaultStartLevel=4',
-				'-Declipse.product=org.eclipse.jdt.ls.core.product');
+				`-Declipse.product=${product}`);
 	if (DEBUG) {
 		params.push('-Dlog.level=ALL');
 	}
@@ -195,6 +199,10 @@ function prepareParams(requirements: RequirementsData, workspacePath, context: E
 		}
 	} else {
 		vmargsCheck = getJavaConfiguration().get('jdt.ls.vmargs');
+	}
+	const jdtLsVmArgs = process.env['JDTLS_EXTRA_VM_ARGS'];
+	if (jdtLsVmArgs) {
+		jdtLsVmArgs.split(' ').forEach(arg => params.push(arg));
 	}
 	let vmargs;
 	if (vmargsCheck !== undefined) {
