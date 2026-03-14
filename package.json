@@ -199,6 +199,7 @@
       }
     ],
     "languages": [
+      {"id":"dsl","extensions":[".dsl"],"configuration":"./language-support/dsl/language-configuration.json"},
       {
         "id": "java",
         "extensions": [
@@ -229,6 +230,7 @@
       }
     ],
     "grammars": [
+      {"language":"dsl","scopeName":"source.dsl","path":"./language-support/dsl/dsl.tmLanguage.json"},
       {
         "language": "java",
         "scopeName": "source.java",

@@ -1,0 +1,18 @@
+{
+  "fileTypes": [
+    "dsl"
+  ],
+  "name": "DSL",
+  "patterns": [
+    {
+      "include": "#comment-line"
+    }
+  ],
+  "repository": {
+    "comment-line": {
+      "match": "//.*",
+      "name": "comment.line.dsl"
+    }
+  },
+  "scopeName": "source.dsl"
+}
