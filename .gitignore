@@ -19,3 +19,7 @@ test-temp
 third-party-licenses
 license_list.json
 compilation-stats.json
+bazel-bin
+bazel-out
+bazel-testlogs
+bazel-vscode-java

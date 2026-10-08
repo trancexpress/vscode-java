@@ -11,6 +11,7 @@ const config = {
 	watchOptions: {
 		ignored: /node_modules/
 	},
+	mode: 'production',
 	target: 'node', // vscode extensions run in a Node.js-context 📖 -> https://webpack.js.org/configuration/node/
 	node: {
 		__dirname: false,
@@ -53,97 +54,4 @@ const config = {
 	},
 }
 
-const MiniCssExtractPlugin = require("mini-css-extract-plugin");
-
-const configChangeSignature = {
-	name: 'changeSignature',
-	mode: 'none',
-	entry: {
-		changeSignature: './src/webview/changeSignature/index.tsx',
-	},
-	module: {
-		rules: [{
-			test: /\.ts(x?)$/,
-			exclude: /node_modules/,
-			loader: 'ts-loader',
-			options: {
-				configFile: 'tsconfig.webview.json'
-			}
-		}, {
-			test: /\.(css)$/,
-			use: [{
-				loader: MiniCssExtractPlugin.loader,
-			}, {
-				loader: 'css-loader'
-			}]
-		}, {
-			test: /\.(ttf)$/,
-			type: 'asset/inline',
-		}]
-	},
-	output: {
-		filename: '[name].js',
-		path: path.resolve(__dirname, 'dist'),
-		publicPath: '/',
-		devtoolModuleFilenameTemplate: "../[resource-path]"
-	},
-	plugins: [
-		new MiniCssExtractPlugin({
-			filename: 'changeSignature.css'
-		}),
-		new webpack.ProvidePlugin({
-			process: 'process/browser',
-		}),
-	],
-	devtool: 'source-map',
-	resolve: {
-		extensions: ['.js', '.ts', '.tsx']
-	}
-}
-
-const configDashboard = {
-	name: 'dashboard',
-	mode: 'none',
-	entry: {
-		dashboard: './src/webview/dashboard/index.tsx',
-	},
-	module: {
-		rules: [{
-			test: /\.ts(x?)$/,
-			exclude: /node_modules/,
-			loader: 'ts-loader',
-			options: {
-				configFile: 'tsconfig.webview.json'
-			}
-		}, {
-			test: /\.(css)$/,
-			use: [{
-				loader: MiniCssExtractPlugin.loader,
-			}, {
-				loader: 'css-loader'
-			}]
-		}, {
-			test: /\.(ttf)$/,
-			type: 'asset/inline',
-		}]
-	},
-	output: {
-		filename: '[name].js',
-		path: path.resolve(__dirname, 'dist'),
-		publicPath: '/',
-		devtoolModuleFilenameTemplate: "../[resource-path]"
-	},
-	plugins: [
-		new MiniCssExtractPlugin({
-			filename: 'dashboard.css'
-		}),
-		new webpack.ProvidePlugin({
-			process: 'process/browser',
-		}),
-	],
-	devtool: 'source-map',
-	resolve: {
-		extensions: ['.js', '.ts', '.tsx']
-	}
-}
-module.exports = [config, configChangeSignature, configDashboard];
+module.exports = [config];

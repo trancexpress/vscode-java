@@ -2116,13 +2116,16 @@
     "ts-loader": "^9.4.2",
     "typescript": "^4.6.4",
     "webpack": "^5.105.0",
-    "webpack-cli": "^4.6.0"
+    "webpack-cli": "^4.6.0",
+    "@vscode/vsce": "^2.24.0"
   },
   "dependencies": {
     "@redhat-developer/vscode-extension-proposals": "0.0.23",
     "@redhat-developer/vscode-redhat-telemetry": "0.10.2",
     "@vscode/codicons": "^0.0.32",
     "@vscode/webview-ui-toolkit": "1.2.2",
+    "tslib": "2.8.1",
+    "@microsoft/fast-web-utilities": "6.0.0",
     "chokidar": "^3.5.3",
     "expand-home-dir": "^0.0.3",
     "fmtr": "^1.1.2",
