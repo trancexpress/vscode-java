@@ -1,0 +1,174 @@
+load("@aspect_rules_webpack//webpack:defs.bzl", "webpack_bundle")
+load("@npm//:defs.bzl", "npm_link_all_packages")
+load("@aspect_rules_js//js:defs.bzl", "js_library", "js_run_binary")
+
+# for workspaces with multiple projects see: https://aspect.build/docs/bazel/javascript/pnpm_rules_js
+
+npm_link_all_packages(
+    name = "node_modules",
+)
+
+webpack_bundle(
+    name = "extension",
+    srcs = glob([
+        "src/**/*.ts",
+        "src/**/*.tsx",
+        "src/**/*.css",
+        "tsconfig.base.json",
+        "tsconfig.json",
+        "tsconfig.webview.json",
+        ".eslintrc.json",
+    ], exclude = [ "src/webview/**" ]),
+    entry_point = "src/extension.ts",
+    output_dir = False,
+    webpack_config = "webpack.config.js",
+    node_modules = ":node_modules",
+    chdir = package_name(),
+    deps = [
+        ":all_modules",
+    ],
+)
+
+webpack_bundle(
+    name = "dashboard",
+    srcs = glob([
+        "src/webview/**/*.ts",
+        "src/webview/**/*.tsx",
+        "src/webview/**/*.css",
+        "src/webviewProtocol/**/*.ts",
+        "tsconfig.base.json",
+        "tsconfig.json",
+        "tsconfig.webview.json",
+        ".eslintrc.json",
+    ]),
+    entry_point = "src/webview/dashboard/index.tsx",
+    output_dir = False,
+    webpack_config = "webpack.config.dashboard.js",
+    node_modules = ":node_modules",
+    chdir = package_name(),
+    deps = [
+        ":all_modules",
+    ],
+)
+
+webpack_bundle(
+    name = "changeSignature",
+    srcs = glob([
+        "src/webview/**/*.ts",
+        "src/webview/**/*.tsx",
+        "src/webview/**/*.css",
+        "src/webviewProtocol/**/*.ts",
+        "tsconfig.base.json",
+        "tsconfig.json",
+        "tsconfig.webview.json",
+        ".eslintrc.json",
+    ]),
+    entry_point = "src/webview/changeSignature/index.tsx",
+    output_dir = False,
+    webpack_config = "webpack.config.changeSignature.js",
+    node_modules = ":node_modules",
+    chdir = package_name(),
+    deps = [
+        ":all_modules",
+    ],
+)
+
+genrule(
+    name = "package_all",
+    srcs =
+        glob([
+            "document/**",
+            "formatters/**",
+            "icons/**",
+            "images/**",
+            "language-support/**",
+            "schemas/**",
+            "snippets/**",
+            "webview-resources/**",
+            "LICENSE",
+            "CHANGELOG.md",
+            "README.md",
+            "package.json",
+            ".vscodeignore",
+            ".npmignore",
+        ]) + [
+            ":extension",
+            ":dashboard",
+            ":changeSignature",
+            ":node_modules/@vscode/vsce",
+        ],
+    outs = ["java.vsix"],
+    cmd =
+        """
+        mkdir "dist/"
+        cp $(@D)/*.js "dist/"
+        $(NODE_PATH) $(@D)/node_modules/@vscode/vsce/vsce package --no-dependencies --allow-star-activation
+        mv java-1.55.0.vsix $@
+        """,
+    toolchains = ["@rules_nodejs//nodejs:current_node_toolchain"],
+    tools = ["@rules_nodejs//nodejs:current_node_toolchain"],
+)
+
+js_library(
+    name = "all_modules",
+    deps = [
+        # we should be needing only these 4 devDependencies:
+#        ":node_modules/webpack",
+#        ":node_modules/eslint-webpack-plugin",
+#        ":node_modules/mini-css-extract-plugin",
+#        ":node_modules/ts-loader",
+        ":node_modules/@redhat-developer/vscode-extension-proposals",
+        ":node_modules/@redhat-developer/vscode-redhat-telemetry",
+        ":node_modules/@vscode/codicons",
+        ":node_modules/@vscode/webview-ui-toolkit",
+        ":node_modules/@microsoft/fast-web-utilities",
+        ":node_modules/tslib",
+        ":node_modules/chokidar",
+        ":node_modules/expand-home-dir",
+        ":node_modules/fmtr",
+        ":node_modules/fs-extra",
+        ":node_modules/glob",
+        ":node_modules/htmlparser2",
+        ":node_modules/jdk-utils",
+        ":node_modules/react",
+        ":node_modules/react-dom",
+        ":node_modules/semver",
+        ":node_modules/vscode-languageclient",
+        ":node_modules/vscode-variables",
+        ":node_modules/winreg-utf8",
+        ":node_modules/winston",
+        ":node_modules/winston-daily-rotate-file",
+        # these are in devDependencies, why do we need them here?...
+        ":node_modules/@vscode/vsce",
+        ":node_modules/@types/fs-extra",
+        ":node_modules/@types/glob",
+        ":node_modules/@types/lodash.findindex",
+        ":node_modules/@types/mocha",
+        ":node_modules/@types/node",
+        ":node_modules/@types/react",
+        ":node_modules/@types/react-dom",
+        ":node_modules/@types/semver",
+        ":node_modules/@types/sinon",
+        ":node_modules/@types/vscode",
+        ":node_modules/@types/vscode-webview",
+        ":node_modules/@types/winreg",
+        ":node_modules/@types/winston",
+        ":node_modules/@typescript-eslint/eslint-plugin",
+        ":node_modules/@typescript-eslint/parser",
+        ":node_modules/@vscode/test-electron",
+        ":node_modules/css-loader",
+        ":node_modules/eslint",
+        ":node_modules/eslint-webpack-plugin",
+        ":node_modules/lodash.findindex",
+        ":node_modules/lodash",
+        ":node_modules/mini-css-extract-plugin",
+        ":node_modules/minimist",
+        ":node_modules/mocha",
+        ":node_modules/sinon",
+        ":node_modules/tar",
+        ":node_modules/ts-loader",
+        ":node_modules/typescript",
+        ":node_modules/webpack",
+        ":node_modules/webpack-cli",
+    ],
+)

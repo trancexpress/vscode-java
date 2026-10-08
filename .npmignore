@@ -1,0 +1,10 @@
+bazel-*
+external
+node_modules
+WORKSPACE
+.*
+docs/*.bazel
+*.patch
+*.tgz
+/BUILD.bazel
+internal_*
