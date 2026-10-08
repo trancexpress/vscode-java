@@ -23,6 +23,9 @@
     },
     "virtualWorkspaces": false
   },
+  "pnpm": {
+    "onlyBuiltDependencies": []
+  },
   "engines": {
     "vscode": "^1.77.0"
   },
@@ -2063,7 +2066,6 @@
     }
   },
   "scripts": {
-    "vscode:prepublish": "node scripts/prepublish.mjs",
     "compile": "tsc -p ./&webpack --mode development",
     "watch": "webpack --mode development --watch",
     "pretest": "npm run compile",
@@ -2105,6 +2107,7 @@
     "eslint": "^8.13.0",
     "eslint-webpack-plugin": "^3.2.0",
     "lodash.findindex": "^4.6.0",
+    "lodash": "^4.6.0",
     "mini-css-extract-plugin": "^2.9.4",
     "minimist": ">=1.2.6",
     "mocha": "^11.1.0",

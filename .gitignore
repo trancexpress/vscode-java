@@ -16,3 +16,6 @@ bin/
 test/resources/projects/**/.vscode
 test/resources/projects/maven/salut/testGradle
 test-temp
+third-party-licenses
+license_list.json
+compilation-stats.json
