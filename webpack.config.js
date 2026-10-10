@@ -11,6 +11,7 @@ const config = {
 	watchOptions: {
 		ignored: /node_modules/
 	},
+	mode: 'production',
 	target: 'node', // vscode extensions run in a Node.js-context 📖 -> https://webpack.js.org/configuration/node/
 	node: {
 		__dirname: false,
@@ -57,7 +58,7 @@ const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 
 const configChangeSignature = {
 	name: 'changeSignature',
-	mode: 'none',
+	mode: 'production',
 	entry: {
 		changeSignature: './src/webview/changeSignature/index.tsx',
 	},
@@ -89,7 +90,7 @@ const configChangeSignature = {
 	},
 	plugins: [
 		new MiniCssExtractPlugin({
-			filename: 'changeSignature.css'
+			filename: '[name].css'
 		}),
 		new webpack.ProvidePlugin({
 			process: 'process/browser',
@@ -103,7 +104,7 @@ const configChangeSignature = {
 
 const configDashboard = {
 	name: 'dashboard',
-	mode: 'none',
+	mode: 'production',
 	entry: {
 		dashboard: './src/webview/dashboard/index.tsx',
 	},
@@ -135,7 +136,7 @@ const configDashboard = {
 	},
 	plugins: [
 		new MiniCssExtractPlugin({
-			filename: 'dashboard.css'
+			filename: '[name].css'
 		}),
 		new webpack.ProvidePlugin({
 			process: 'process/browser',
@@ -146,4 +147,5 @@ const configDashboard = {
 		extensions: ['.js', '.ts', '.tsx']
 	}
 }
+
 module.exports = [config, configChangeSignature, configDashboard];
