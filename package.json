@@ -23,9 +23,6 @@
     },
     "virtualWorkspaces": false
   },
-  "pnpm": {
-    "onlyBuiltDependencies": []
-  },
   "engines": {
     "vscode": "^1.77.0"
   },

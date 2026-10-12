@@ -12,7 +12,7 @@ const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 
 const configDashboard = {
 	name: 'dashboard',
-	mode: 'production',
+	mode: 'none',
 	entry: {
 		dashboard: './src/webview/dashboard/index.tsx',
 	},

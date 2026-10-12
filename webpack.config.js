@@ -11,7 +11,7 @@ const config = {
 	watchOptions: {
 		ignored: /node_modules/
 	},
-	mode: 'production',
+	mode: 'none',
 	target: 'node', // vscode extensions run in a Node.js-context 📖 -> https://webpack.js.org/configuration/node/
 	node: {
 		__dirname: false,

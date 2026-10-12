@@ -1,191 +1,298 @@
-load("@aspect_rules_webpack//webpack:defs.bzl", "webpack_bundle")
-load("@npm//:defs.bzl", "npm_link_all_packages")
-load("@aspect_rules_js//js:defs.bzl", "js_library", "js_run_binary")
+load('@aspect_rules_webpack//webpack:defs.bzl', 'webpack_bundle')
+load('@npm//:defs.bzl', 'npm_link_all_packages')
+load('@aspect_rules_js//js:defs.bzl', 'js_library', 'js_run_binary')
 
 # for workspaces with multiple projects see: https://aspect.build/docs/bazel/javascript/pnpm_rules_js
 
 npm_link_all_packages(
-    name = "node_modules",
+    name = 'node_modules',
 )
 
 webpack_bundle(
-    name = "extension",
-    srcs = [":extension_sources"],
+    name = 'extension',
+    srcs = [':extension_sources'],
     output_dir = True,
-    webpack_config = ":extension_config",
-    node_modules = ":node_modules",
+    webpack_config = ':extension_config',
+    node_modules = ':node_modules',
     chdir = package_name(),
-    deps = [":all_modules"],
+    deps = [':all_modules'],
+    args = ['--mode', 'production', '--json=extension/extension_stats.json'],
 )
 
 webpack_bundle(
-    name = "dashboard",
-    srcs = [":webview_sources"],
+    name = 'dashboard',
+    srcs = [':webview_sources'],
     output_dir = True,
-    webpack_config = ":dashboard_config",
-    node_modules = ":node_modules",
+    webpack_config = ':dashboard_config',
+    node_modules = ':node_modules',
     chdir = package_name(),
-    deps = [":all_modules"],
+    deps = [':all_modules'],
+    args = ['--mode', 'production', '--json=dashboard/dashboard_stats.json'],
 )
 
 webpack_bundle(
-    name = "changeSignature",
-    srcs = [":webview_sources"],
+    name = 'changeSignature',
+    srcs = [':webview_sources'],
     output_dir = True,
-    webpack_config = ":changeSignature_config",
-    node_modules = ":node_modules",
+    webpack_config = ':changeSignature_config',
+    node_modules = ':node_modules',
     chdir = package_name(),
-    deps = [":all_modules"],
+    deps = [':all_modules'],
+    args = ['--mode', 'production', '--json=changeSignature/changeSignature_stats.json'],
 )
 
 genrule(
-    name = "package_all",
+    name = 'package_all',
     srcs = [
-        ":package_files",
-        ":extension",
-        ":dashboard",
-        ":changeSignature",
-        ":node_modules/@vscode/vsce",
+        ':package_files',
+        ':extension',
+        ':dashboard',
+        ':changeSignature',
+        ':third_party_licenses',
+        ':node_modules/@vscode/vsce',
     ],
-    outs = ["java.vsix"],
+    outs = ['java.vsix'],
     cmd =
-        """
+        '''
         # copy the webpack build result for each of the configurations we run via webpack_bundle
-        mkdir "dist"/
-        mv $(@D)/extension/* "dist/"
-        mv $(@D)/dashboard/* "dist/"
-        mv $(@D)/changeSignature/* "dist/"
+        DIST="dist/"
+        mkdir $$DIST
+        unzip -q $(location third_party_licenses)
+        mv $(@D)/extension/* $$DIST
+        mv $(@D)/dashboard/* $$DIST
+        mv $(@D)/changeSignature/* $$DIST
+        # we dont package compilation stats, we only use these for license gathering
+        rm $$DIST/*stats.json
         # then package via vsce
         $(NODE_PATH) $(@D)/node_modules/@vscode/vsce/vsce package --no-dependencies --allow-star-activation
-        mv java-1.55.0.vsix $@
-        """,
-    toolchains = ["@rules_nodejs//nodejs:current_node_toolchain"],
-    tools = ["@rules_nodejs//nodejs:current_node_toolchain"],
+        mv java-*.vsix $@
+        ''',
+    toolchains = ['@rules_nodejs//nodejs:current_node_toolchain'],
+    tools = ['@rules_nodejs//nodejs:current_node_toolchain'],
+)
+
+# TODO: find a way to not call 'pnpm install' here, but instead use what is already installed by 'webpack_bundle', see XXX comment in 'cmd'
+genrule(
+    name = 'third_party_licenses',
+    srcs = [
+        'package.json',
+        'pnpm-lock.yaml',
+        'parseLicenseList.py',
+        ':extension',
+        ':dashboard',
+        ':changeSignature',
+    ],
+    outs = [
+        'third_party_licenses.zip',
+    ],
+    cmd =
+        '''
+        # pnpm from rules_js is a wrapper, this wrapper requires 'BAZEL_BINDIR' to be set
+        export BAZEL_BINDIR="$(BINDIR)"
+        PNPM="$(execpath @pnpm)"
+        CONFIG="--config.store-dir=.pnpm-store --config.cache-dir=.pnpm-cache"  # TODO: add mirror
+        # XXX: Calling 'pnpm licenses list' in $(BINDIR) fails, even if we list all developer dependencies in 'srcs'.
+        #      So run 'pnpm install' and before checking licenses. This does mean we download packages which should already be available...
+        $$PNPM $$CONFIG install --frozen-lockfile
+        $$PNPM $$CONFIG licenses list --prod --json > license_list.json
+
+        OUTPUT_FOLDER="third_party_licenses/"
+        mkdir "$$OUTPUT_FOLDER"
+        html="$$OUTPUT_FOLDER/index.html"
+
+        /usr/bin/python3 $(location parseLicenseList.py) license_list.json $(@D)/*/*stats.json > modules_list.csv
+
+        echo '
+        <head>
+        </head>
+        <body>
+        <table>
+        <tr><td>Module</td><td>Version</td><td>License</td><td>Repository</td><td>License File</td></tr>
+        ' >> "$$html"
+
+        declare -a license_files=(
+          "LICENSE"
+          "license"
+          "License"
+          "COPYING"
+          "README"
+        )
+
+        declare -a regex_suffix=(
+          ""
+          "*"
+          ".*"
+        )
+
+        echo "Copying licenses and creating overview page..."
+        while read -r module
+        do
+          name=`echo $$module | cut -d, -f1`
+          version=`echo $$module | cut -d, -f2`
+          license=`echo $$module | cut -d, -f3`
+          homepage=`echo $$module | cut -d, -f4`
+          path=`echo $$module | cut -d, -f5`
+          #echo "Package: $$name, version: $$version, path: $$path"
+          license_file=""
+          for l in "$${license_files[@]}"
+          do
+            for s in "$${regex_suffix[@]}"
+            do
+              # sort, so that the same file is picked on every build regardless of file system order
+              license_file=`find "$$path" -path "*/$$l$$s" | LC_ALL=C sort | head -n 1`
+              if [[ "$$license_file" != "" ]]
+              then
+                break 2
+              fi
+            done
+          done
+          if [[ "$$license_file" == "" ]]
+          then
+            echo "WARNING: found NO LICENSE for: $$name"
+            tree "$$path"
+            echo "<tr><td>$$name</td><td>$$version</td><td>$$license</td><td><a href=\"$$homepage\">$$homepage</a></td><td></td></tr>" >> "$$html"
+            continue
+          fi
+          file="$${name//[\\/]/_}_LICENSE"
+          destination="$$OUTPUT_FOLDER/$$file"
+          echo "Copying license file: $$license_file -> $$destination"
+          cp "$$license_file" "$$destination"
+          echo "<tr><td>$$name</td><td>$$version</td><td>$$license</td><td><a href=\"$$homepage\">$$homepage</a></td><td><a href=\"./$$file\">$$file</a></td></tr>" >> "$$html"
+        done < modules_list.csv
+
+        echo '
+        </table>
+        </body>
+        ' >> "$$html"
+        tree $$OUTPUT_FOLDER
+        zip -q -r $@ $$OUTPUT_FOLDER
+        ''',
+    toolchains = ['@rules_nodejs//nodejs:current_node_toolchain'],
+    tools = [
+        '@pnpm',
+        '@rules_nodejs//nodejs:current_node_toolchain',
+    ],
 )
 
 alias(
-    name = "extension_config",
-    actual = "webpack.config.js",
+    name = 'extension_config',
+    actual = 'webpack.config.js',
 )
 
 alias(
-    name = "dashboard_config",
-    actual = "webpack.config.dashboard.js",
+    name = 'dashboard_config',
+    actual = 'webpack.config.dashboard.js',
 )
 
 alias(
-    name = "changeSignature_config",
-    actual = "webpack.config.changeSignature.js",
+    name = 'changeSignature_config',
+    actual = 'webpack.config.changeSignature.js',
 )
 
 filegroup(
-    name = "extension_sources",
+    name = 'extension_sources',
     srcs = glob([
-        "src/**/*.ts",
-        "src/**/*.tsx",
-        "src/**/*.css",
-        "tsconfig.base.json",
-        "tsconfig.json",
-        "tsconfig.webview.json",
-        ".eslintrc.json",
-    ], exclude = [ "src/webview/**" ]),
+        'src/**/*.ts',
+        'src/**/*.tsx',
+        'src/**/*.css',
+        'tsconfig.base.json',
+        'tsconfig.json',
+        'tsconfig.webview.json',
+        '.eslintrc.json',
+    ], exclude = [ 'src/webview/**' ]),
 )
 
 filegroup(
-    name = "webview_sources",
+    name = 'webview_sources',
     srcs = glob([
-        "src/webview/**/*.ts",
-        "src/webview/**/*.tsx",
-        "src/webview/**/*.css",
-        "src/webviewProtocol/**/*.ts",
-        "tsconfig.base.json",
-        "tsconfig.json",
-        "tsconfig.webview.json",
-        ".eslintrc.json",
+        'src/webview/**/*.ts',
+        'src/webview/**/*.tsx',
+        'src/webview/**/*.css',
+        'src/webviewProtocol/**/*.ts',
+        'tsconfig.base.json',
+        'tsconfig.json',
+        'tsconfig.webview.json',
+        '.eslintrc.json',
     ]),
 )
 
 filegroup(
-    name = "package_files",
+    name = 'package_files',
     srcs = glob([
-        "document/**",
-        "formatters/**",
-        "icons/**",
-        "images/**",
-        "language-support/**",
-        "schemas/**",
-        "snippets/**",
-        "webview-resources/**",
-        "LICENSE",
-        "CHANGELOG.md",
-        "README.md",
-        "package.json",
-        ".vscodeignore",
-         ".npmignore",
+        'document/**',
+        'formatters/**',
+        'icons/**',
+        'images/**',
+        'language-support/**',
+        'schemas/**',
+        'snippets/**',
+        'webview-resources/**',
+        'LICENSE',
+        'CHANGELOG.md',
+        'README.md',
+        'package.json',
+        '.vscodeignore',
+         '.npmignore',
     ]),
 )
 
 
 js_library(
-    name = "all_modules",
+    name = 'all_modules',
     deps = [
-        # we should be needing only these 4 devDependencies:
-#        ":node_modules/webpack",
-#        ":node_modules/eslint-webpack-plugin",
-#        ":node_modules/mini-css-extract-plugin",
-#        ":node_modules/ts-loader",
-        ":node_modules/@redhat-developer/vscode-extension-proposals",
-        ":node_modules/@redhat-developer/vscode-redhat-telemetry",
-        ":node_modules/@vscode/codicons",
-        ":node_modules/@vscode/webview-ui-toolkit",
-        ":node_modules/@microsoft/fast-web-utilities",
-        ":node_modules/tslib",
-        ":node_modules/chokidar",
-        ":node_modules/expand-home-dir",
-        ":node_modules/fmtr",
-        ":node_modules/fs-extra",
-        ":node_modules/glob",
-        ":node_modules/htmlparser2",
-        ":node_modules/jdk-utils",
-        ":node_modules/react",
-        ":node_modules/react-dom",
-        ":node_modules/semver",
-        ":node_modules/vscode-languageclient",
-        ":node_modules/vscode-variables",
-        ":node_modules/winreg-utf8",
-        ":node_modules/winston",
-        ":node_modules/winston-daily-rotate-file",
-        # these are in devDependencies, why do we need them here?...
-        ":node_modules/@vscode/vsce",
-        ":node_modules/@types/fs-extra",
-        ":node_modules/@types/glob",
-        ":node_modules/@types/lodash.findindex",
-        ":node_modules/@types/mocha",
-        ":node_modules/@types/node",
-        ":node_modules/@types/react",
-        ":node_modules/@types/react-dom",
-        ":node_modules/@types/semver",
-        ":node_modules/@types/sinon",
-        ":node_modules/@types/vscode",
-        ":node_modules/@types/vscode-webview",
-        ":node_modules/@types/winreg",
-        ":node_modules/@types/winston",
-        ":node_modules/@typescript-eslint/eslint-plugin",
-        ":node_modules/@typescript-eslint/parser",
-        ":node_modules/@vscode/test-electron",
-        ":node_modules/css-loader",
-        ":node_modules/eslint",
-        ":node_modules/eslint-webpack-plugin",
-        ":node_modules/lodash.findindex",
-        ":node_modules/lodash",
-        ":node_modules/mini-css-extract-plugin",
-        ":node_modules/minimist",
-        ":node_modules/mocha",
-        ":node_modules/sinon",
-        ":node_modules/tar",
-        ":node_modules/ts-loader",
-        ":node_modules/typescript",
-        ":node_modules/webpack",
-        ":node_modules/webpack-cli",
+        # this must contain all dependencies, production and development
+        ':node_modules/@redhat-developer/vscode-extension-proposals',
+        ':node_modules/@redhat-developer/vscode-redhat-telemetry',
+        ':node_modules/@vscode/codicons',
+        ':node_modules/@vscode/webview-ui-toolkit',
+        ':node_modules/@microsoft/fast-web-utilities',
+        ':node_modules/tslib',
+        ':node_modules/chokidar',
+        ':node_modules/expand-home-dir',
+        ':node_modules/fmtr',
+        ':node_modules/fs-extra',
+        ':node_modules/glob',
+        ':node_modules/htmlparser2',
+        ':node_modules/jdk-utils',
+        ':node_modules/react',
+        ':node_modules/react-dom',
+        ':node_modules/semver',
+        ':node_modules/vscode-languageclient',
+        ':node_modules/vscode-variables',
+        ':node_modules/winreg-utf8',
+        ':node_modules/winston',
+        ':node_modules/winston-daily-rotate-file',
+        # development dependencies
+        ':node_modules/@vscode/vsce',
+        ':node_modules/@types/fs-extra',
+        ':node_modules/@types/glob',
+        ':node_modules/@types/lodash.findindex',
+        ':node_modules/@types/mocha',
+        ':node_modules/@types/node',
+        ':node_modules/@types/react',
+        ':node_modules/@types/react-dom',
+        ':node_modules/@types/semver',
+        ':node_modules/@types/sinon',
+        ':node_modules/@types/vscode',
+        ':node_modules/@types/vscode-webview',
+        ':node_modules/@types/winreg',
+        ':node_modules/@types/winston',
+        ':node_modules/@typescript-eslint/eslint-plugin',
+        ':node_modules/@typescript-eslint/parser',
+        ':node_modules/@vscode/test-electron',
+        ':node_modules/css-loader',
+        ':node_modules/eslint',
+        ':node_modules/eslint-webpack-plugin',
+        ':node_modules/lodash.findindex',
+        ':node_modules/lodash',
+        ':node_modules/mini-css-extract-plugin',
+        ':node_modules/minimist',
+        ':node_modules/mocha',
+        ':node_modules/sinon',
+        ':node_modules/tar',
+        ':node_modules/ts-loader',
+        ':node_modules/typescript',
+        ':node_modules/webpack',
+        ':node_modules/webpack-cli',
     ],
 )

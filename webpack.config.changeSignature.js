@@ -12,7 +12,7 @@ const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 
 const configChangeSignature = {
 	name: 'changeSignature',
-	mode: 'production',
+	mode: 'none',
 	entry: {
 		changeSignature: './src/webview/changeSignature/index.tsx',
 	},
