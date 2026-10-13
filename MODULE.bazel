@@ -1,15 +1,27 @@
+module(
+    name = "workspaces_test",
+    repo_name = "bazel_workspaces_tests",
+)
+
 bazel_dep(name = "rules_nodejs", version = "6.7.3")
 
 bazel_dep(name = "aspect_rules_js", version = "3.4.0")
 
 npm = use_extension("@aspect_rules_js//npm:extensions.bzl", "npm")
 npm.npm_translate_lock(
-    name = "npm",
+    name = "npm_root",
     npmrc = "//:.npmrc",
     pnpm_lock = "//:pnpm-lock.yaml",
     verify_node_modules_ignored = "//:.bazelignore",
 )
-use_repo(npm, "npm")
+
+npm.npm_translate_lock(
+    name = "npm_vscodejava",
+    npmrc = "//:.npmrc",
+    pnpm_lock = "//td1/td2/td3/vscode-java:pnpm-lock.yaml",
+)
+
+use_repo(npm, "npm_root", "npm_vscodejava")
 
 bazel_dep(name = "aspect_rules_webpack", version = "0.18.0")
 

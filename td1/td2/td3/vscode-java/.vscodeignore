@@ -32,3 +32,4 @@ webpack.config.js
 .sdkmanrc
 bazel-out
 external
+td1/
