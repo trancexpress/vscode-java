@@ -16,7 +16,7 @@ webpack_bundle(
     node_modules = ':node_modules',
     chdir = package_name(),
     deps = [':all_modules'],
-    args = ['--mode', 'production', '--json=extension/extension_stats.json'],
+    args = ['--mode', 'production', '--json=extension/extension_stats.json', '--config-name', 'extension',],
 )
 
 webpack_bundle(
@@ -27,7 +27,7 @@ webpack_bundle(
     node_modules = ':node_modules',
     chdir = package_name(),
     deps = [':all_modules'],
-    args = ['--mode', 'production', '--json=dashboard/dashboard_stats.json'],
+    args = ['--mode', 'production', '--json=dashboard/dashboard_stats.json', '--config-name', 'dashboard',],
 )
 
 webpack_bundle(
@@ -38,7 +38,7 @@ webpack_bundle(
     node_modules = ':node_modules',
     chdir = package_name(),
     deps = [':all_modules'],
-    args = ['--mode', 'production', '--json=changeSignature/changeSignature_stats.json'],
+    args = ['--mode', 'production', '--json=changeSignature/changeSignature_stats.json', '--config-name', 'changeSignature',],
 )
 
 genrule(
@@ -181,12 +181,12 @@ alias(
 
 alias(
     name = 'dashboard_config',
-    actual = 'webpack.config.dashboard.js',
+    actual = 'webpack.config.js',
 )
 
 alias(
     name = 'changeSignature_config',
-    actual = 'webpack.config.changeSignature.js',
+    actual = 'webpack.config.js',
 )
 
 filegroup(
